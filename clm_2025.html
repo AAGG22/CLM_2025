@@ -158,10 +158,20 @@
 
         .center-panel {
             grid-column: 2;
-            display: grid;
-            grid-template-rows: 1fr 1fr;
+            display: flex;
+            flex-direction: column;
             gap: 10px;
-            overflow: hidden;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .center-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .center-panel::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
         }
 
         .right-panel {
@@ -247,7 +257,7 @@
                     <div>
                         <h1 style="font-size: 20px; font-weight: 700; color: #2c3e50; margin: 0; line-height: 1.2;">
                             Centro de Lactancia Materna</h1>
-                        <p style="font-size: 12px; color: #7f8c8d; margin: 0;"> Dashboard | Período 2025</p>
+                        <p style="font-size: 12px; color: #7f8c8d; margin: 0;">Dashboard | Período 2025</p>
                     </div>
                 </div>
                 <div style="display: flex; gap: 12px;">
@@ -269,6 +279,7 @@
         <div class="main-grid">
             <!-- Left Panel -->
             <div class="left-panel">
+
                 <div class="glass-panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
                     <div class="section-title" style="margin: 12px 12px 0 12px;">Atención en Internación</div>
                     <div class="panel-content">
@@ -340,23 +351,33 @@
 
             <!-- Center Panel -->
             <div class="center-panel">
+                <!--
                 <div class="glass-panel" style="display: flex; flex-direction: column; min-height: 0;">
                     <div class="section-title" style="margin: 12px 12px 0 12px;">Educación Recibida (% SI)</div>
                     <div class="panel-content" style="flex: 1;">
                         <canvas id="chartEducacion"></canvas>
                     </div>
                 </div>
+                -->
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="glass-panel" style="display: flex; flex-direction: column; min-height: 0;">
+                <div class="glass-panel" style="display: flex; flex-direction: column; min-height: 280px; max-height: 350px;">
+                    <div class="section-title" style="margin: 12px 12px 0 12px;">Educación Recibida (% SI)</div>
+                    <div class="panel-content" style="flex: 1; min-height: 200px;">
+                        <canvas id="chartEducacion"></canvas>
+                    </div>
+                </div>
+
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-height: 250px;">
+                    <div class="glass-panel" style="display: flex; flex-direction: column; min-height: 250px;">
                         <div class="section-title" style="margin: 12px 12px 0 12px;">Alimentación al Alta</div>
-                        <div class="panel-content" style="flex: 1;">
+                        <div class="panel-content" style="flex: 1; min-height: 180px;">
                             <canvas id="chartAlimentacion"></canvas>
                         </div>
                     </div>
-                    <div class="glass-panel" style="display: flex; flex-direction: column; min-height: 0;">
+                    <div class="glass-panel" style="display: flex; flex-direction: column; min-height: 250px;">
                         <div class="section-title" style="margin: 12px 12px 0 12px;">Binomios asistidos por Sector</div>
-                        <div class="panel-content" style="flex: 1;">
+                        <div class="panel-content" style="flex: 1; min-height: 180px;">
                             <canvas id="chartExtraccion"></canvas>
                         </div>
                     </div>
@@ -496,11 +517,18 @@
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } } } }
         });
 
+
         new Chart(document.getElementById('chartEducacion'), {
             type: 'bar',
             data: { labels: data.educacion.labels, datasets: [{ label: '% Recibió educación', data: data.educacion.values, backgroundColor: data.educacion.colors, borderRadius: 4, barThickness: 14 }] },
             options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100, ticks: { font: { size: 9 } }, grid: { color: '#f0f0f0' } }, y: { ticks: { font: { size: 9 } }, grid: { display: false } } } }
         });
+
+
+
+
+
+
 
         new Chart(document.getElementById('chartAlimentacion'), {
             type: 'bar',
@@ -540,5 +568,3 @@
 </body>
 
 </html>
-
-
