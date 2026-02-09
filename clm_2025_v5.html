@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard CLM 2025</title>
+    <title>Dashboard CLM 2025 - Centro de Lactancia Materna</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -122,7 +122,6 @@
             background: #fdf2f2;
             border-radius: 8px;
             font-size: 14px;
-            max-width: 400px;
         }
         .main-grid {
             display: grid;
@@ -185,23 +184,41 @@
         .badge-danger { background: #f8d7da; color: #721c24; }
         .refresh-btn {
             position: fixed;
-            bottom: 80px;
+            bottom: 20px;
             right: 20px;
             background: #667eea;
             color: white;
             border: none;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 56px;
+            height: 56px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            font-size: 20px;
-            transition: transform 0.2s;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.5);
+            font-size: 24px;
+            transition: all 0.3s;
             z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .refresh-btn:hover { transform: scale(1.1); }
+        .refresh-btn:hover { 
+            transform: scale(1.1) rotate(180deg); 
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+        }
         .refresh-btn.spinning { animation: spin 1s linear infinite; }
         .hidden { display: none !important; }
+        .last-update {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 99;
+        }
     </style>
 </head>
 <body>
@@ -214,6 +231,11 @@
     <button class="refresh-btn hidden" id="refreshBtn" onclick="loadData()" title="Actualizar datos">
         <i class="fas fa-sync-alt"></i>
     </button>
+
+    <div class="last-update hidden" id="lastUpdateBanner">
+        <i class="fas fa-clock" style="margin-right: 6px;"></i>
+        Actualizado: <span id="last-update-time">-</span>
+    </div>
 
     <div class="dashboard-container hidden" id="dashboard">
         <!-- Header -->
@@ -352,8 +374,13 @@
                         </div>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 11px; color: #95a5a6;"><i class="fas fa-database" style="margin-right: 4px;"></i><span id="data-source">GitHub</span> | <span id="last-update">-</span></div>
-                        <div style="font-size: 10px; color: #bdc3c7; margin-top: 4px;">Centro de Lactancia Materna © 2025</div>
+                        <div style="font-size: 11px; color: #95a5a6;">
+                            <i class="fas fa-file-csv" style="margin-right: 4px;"></i>
+                            Datos desde: <strong>CLM_2025_dashboard_estructurado.csv</strong>
+                        </div>
+                        <div style="font-size: 10px; color: #bdc3c7; margin-top: 4px;">
+                            Presioná <strong>F5</strong> o el botón 🔄 para actualizar
+                        </div>
                     </div>
                 </div>
             </div>
@@ -381,11 +408,8 @@
     </div>
 
     <script>
-        // URL de tu CSV en GitHub (usando proxy CORS)
-        const CSV_URL = 'CLM_2025_dashboard_estructurado.csv';
-        
-        // Alternativa: Google Sheets publicado (cuando lo configures)
-        // const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?output=csv';
+        // URL del CSV en el mismo repositorio
+        const CSV_URL = './CLM_2025_dashboard_estructurado.csv';
         
         let charts = {};
 
@@ -396,20 +420,25 @@
             document.getElementById('error-container').innerHTML = '';
             
             try {
-                const response = await fetch(CSV_URL);
+                const timestamp = new Date().getTime();
+                const response = await fetch(`${CSV_URL}?t=${timestamp}`);
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`No se pudo cargar el CSV (status: ${response.status})`);
                 }
                 
                 const csvText = await response.text();
-                console.log('CSV cargado:', csvText.substring(0, 200)); // Debug
+                console.log('CSV cargado, tamaño:', csvText.length);
+                
+                if (csvText.trim().length === 0) {
+                    throw new Error('El archivo CSV está vacío');
+                }
                 
                 const data = parseCSV(csvText);
-                console.log('Datos parseados:', data.length, 'filas'); // Debug
+                console.log('Filas parseadas:', data.length);
                 
                 if (data.length === 0) {
-                    throw new Error('No se pudieron parsear los datos del CSV');
+                    throw new Error('No se pudieron leer datos del CSV');
                 }
                 
                 processData(data);
@@ -418,16 +447,22 @@
                 document.getElementById('dashboard').classList.remove('hidden');
                 document.getElementById('refreshBtn').classList.remove('hidden');
                 document.getElementById('refreshBtn').classList.remove('spinning');
-                document.getElementById('last-update').textContent = new Date().toLocaleString('es-ES');
+                document.getElementById('lastUpdateBanner').classList.remove('hidden');
+                
+                const now = new Date();
+                document.getElementById('last-update-time').textContent = now.toLocaleString('es-ES', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
                 
             } catch (error) {
-                console.error('Error completo:', error);
+                console.error('Error:', error);
                 document.getElementById('error-container').innerHTML = `
                     <div class="error-msg">
-                        <strong>Error al cargar datos</strong><br>
-                        ${error.message}<br><br>
+                        <strong>${error.message}</strong><br><br>
+                        Verificá que el archivo <strong>CLM_2025_dashboard_estructurado.csv</strong> exista en la misma carpeta.<br><br>
                         <button onclick="loadData()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">Reintentar</button>
-                        <button onclick="useLocalData()" style="padding: 8px 16px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; margin-left: 8px;">Usar datos locales</button>
                     </div>
                 `;
                 document.getElementById('refreshBtn').classList.remove('spinning');
@@ -443,7 +478,6 @@
             
             for (let i = 1; i < lines.length; i++) {
                 const currentline = lines[i].split(',');
-                // Si la línea está vacía, saltar
                 if (currentline.length < 2) continue;
                 
                 const obj = {};
@@ -464,8 +498,6 @@
                 if (!datos[row.Seccion]) datos[row.Seccion] = [];
                 datos[row.Seccion].push(row);
             });
-
-            console.log('Secciones encontradas:', Object.keys(datos)); // Debug
 
             // Metadata
             if (datos.METADATA) {
@@ -518,7 +550,6 @@
                     const total = si + no;
                     const porcentaje = total > 0 ? ((si / total) * 100) : 0;
                     
-                    // Acortar nombre para el gráfico
                     const nombreCorto = nombre.length > 15 ? nombre.substring(0, 12) + '...' : nombre;
                     educacionLabels.push(nombreCorto);
                     educacionValues.push(porcentaje.toFixed(1));
@@ -561,7 +592,6 @@
                     }
                 });
 
-                // Lista detalle
                 const listContainer = document.getElementById('educacion-list');
                 listContainer.innerHTML = '';
                 educacionDetalle.forEach(item => {
@@ -749,62 +779,7 @@
             document.getElementById('modal' + person.charAt(0).toUpperCase() + person.slice(1)).style.display = 'none'; 
         }
 
-        // Datos locales de respaldo (por si falla la carga)
-        function useLocalData() {
-            const localData = [
-                {Seccion: 'METADATA', Indicador: 'Total_Historias_Clinicas', Valor: '1260'},
-                {Seccion: 'METADATA', Indicador: 'Periodo', Valor: '2025'},
-                {Seccion: 'ATENCION_MADRES', Indicador: 'Total_Madres', Valor: '1132'},
-                {Seccion: 'ATENCION_MADRES', Indicador: 'Parto', Valor: '644'},
-                {Seccion: 'ATENCION_MADRES', Indicador: 'Cesarea', Valor: '488'},
-                {Seccion: 'ATENCION_MADRES', Indicador: 'Reingresos', Valor: '29'},
-                {Seccion: 'ATENCION_MADRES', Indicador: 'Requieren_Asisencia', Valor: '265'},
-                {Seccion: 'ATENCION_MADRES', Indicador: 'Buena_Succion', Valor: '642'},
-                {Seccion: 'EDUCACION', Indicador: 'Beneficios_Lactancia', Valor: '1125', Auxiliar_NO_o_Detalle: '7', Color_o_Codigo: 'TL'},
-                {Seccion: 'EDUCACION', Indicador: 'Transicion_Leche', Valor: '1128', Auxiliar_NO_o_Detalle: '4', Color_o_Codigo: 'FA'},
-                {Seccion: 'EDUCACION', Indicador: 'Frecuencia_Alimentacion', Valor: '1131', Auxiliar_NO_o_Detalle: '1', Color_o_Codigo: 'RO'},
-                {Seccion: 'EDUCACION', Indicador: 'Regla_Oro', Valor: '1128', Auxiliar_NO_o_Detalle: '4', Color_o_Codigo: 'TPP'},
-                {Seccion: 'EDUCACION', Indicador: 'Tecnica_Prendida_Pecho', Valor: '1113', Auxiliar_NO_o_Detalle: '19', Color_o_Codigo: 'ALAS'},
-                {Seccion: 'EDUCACION', Indicador: 'Pautas_ALAS', Valor: '327', Auxiliar_NO_o_Detalle: '805', Color_o_Codigo: 'BLH'},
-                {Seccion: 'EDUCACION', Indicador: 'Extraccion_Conservacion', Valor: '763', Auxiliar_NO_o_Detalle: '369', Color_o_Codigo: 'SH'},
-                {Seccion: 'EDUCACION', Indicador: 'Senales_Hambre', Valor: '1129', Auxiliar_NO_o_Detalle: '3', Color_o_Codigo: 'SS'},
-                {Seccion: 'EDUCACION', Indicador: 'Signos_Saciedad', Valor: '1131', Auxiliar_NO_o_Detalle: '1', Color_o_Codigo: 'LDM'},
-                {Seccion: 'EDUCACION', Indicador: 'Lavado_Manus', Valor: '1131', Auxiliar_NO_o_Detalle: '1', Color_o_Codigo: 'PBQL'},
-                {Seccion: 'EDUCACION', Indicador: 'Prevencion_BQL', Valor: '1132', Auxiliar_NO_o_Detalle: '0', Color_o_Codigo: 'BQL'},
-                {Seccion: 'EDUCACION', Indicador: 'PDF_WhatsApp', Valor: '1122', Auxiliar_NO_o_Detalle: '10', Color_o_Codigo: 'WAPP'},
-                {Seccion: 'ALIMENTACION_ALTA', Indicador: 'Pecho_Exclusivo', Valor: '633', Color_o_Codigo: '#2ECC71'},
-                {Seccion: 'ALIMENTACION_ALTA', Indicador: 'Lactancia_Mixta', Valor: '97', Color_o_Codigo: '#F39C12'},
-                {Seccion: 'ALIMENTACION_ALTA', Indicador: 'Formula', Valor: '9', Color_o_Codigo: '#E74C3C'},
-                {Seccion: 'ALIMENTACION_ALTA', Indicador: 'Vacias', Valor: '104', Color_o_Codigo: '#95A5A6'},
-                {Seccion: 'EXTRACCION_LH', Indicador: 'Periodo', Valor: '07/07/2025 al 31/12/2025'},
-                {Seccion: 'EXTRACCION_LH', Indicador: 'Total_Binomios', Valor: '1402'},
-                {Seccion: 'EXTRACCION_LH', Indicador: 'Litros_Extraidos', Valor: '253.96'},
-                {Seccion: 'EXTRACCION_LH', Indicador: 'Minutos_Maquina', Valor: '35050'},
-                {Seccion: 'EXTRACCION_LH', Indicador: 'NEO', Valor: '1220', Color_o_Codigo: '#9B59B6'},
-                {Seccion: 'EXTRACCION_LH', Indicador: 'RPM', Valor: '107', Color_o_Codigo: '#3498DB'},
-                {Seccion: 'EXTRACCION_LH', Indicador: 'SIC', Valor: '56', Color_o_Codigo: '#1ABC9C'},
-                {Seccion: 'EXTRACCION_LH', Indicador: 'CE', Valor: '9', Color_o_Codigo: '#E67E22'},
-                {Seccion: 'EXTRACCION_LH', Indicador: 'UTIGO', Valor: '3', Color_o_Codigo: '#34495E'},
-                {Seccion: 'COMPLICACIONES', Indicador: 'Congestion', Valor: '66', Color_o_Codigo: '#E74C3C'},
-                {Seccion: 'COMPLICACIONES', Indicador: 'Mastitis', Valor: '0', Color_o_Codigo: '#27AE60'},
-                {Seccion: 'COMPLICACIONES', Indicador: 'Pezon_Dolor_Fisura', Valor: '13', Color_o_Codigo: '#F39C12'}
-            ];
-            
-            document.getElementById('data-source').textContent = 'Local (respaldo)';
-            processData(localData);
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('dashboard').classList.remove('hidden');
-            document.getElementById('refreshBtn').classList.remove('hidden');
-        }
-
-        // Cargar al iniciar
         window.onload = loadData;
-        
-        // Auto-refresh cada 60 segundos
-        setInterval(loadData, 60000);
     </script>
 </body>
-
 </html>
-
-
