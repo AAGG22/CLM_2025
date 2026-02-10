@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard CLM 2025 - Centro de Lactancia Materna</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            font-family: 'Segoe UI', sans-serif;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #717780 0%, #c0cde7 100%);
+            margin: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .kpi-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .kpi-value {
+            font-size: clamp(18px, 3vw, 24px);
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .kpi-label {
+            font-size: clamp(9px, 1.5vw, 11px);
+            opacity: 0.9;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .section-title {
+            font-size: clamp(11px, 1.5vw, 12px);
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-left: 3px solid #667eea;
+            padding-left: 8px;
+        }
+
+        .footer-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #667eea;
+            transition: transform 0.2s;
+            object-fit: cover;
+        }
+
+        .footer-avatar:hover {
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 24px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        /* Grid Layout - Desktop First */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            grid-template-rows: auto 1fr auto;
+            gap: 10px;
+            flex: 1;
+            min-height: 0;
+            margin-top: 10px; /* ESPACIO ENTRE HEADER Y PANELES */
+        }
+
+        .header-area {
+            grid-column: 1 / -1;
+        }
+
+        .left-panel {
+            grid-column: 1;
+            grid-row: 1; /* Fila 1 del contenido */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .center-panel {
+            grid-column: 2;
+            grid-row: 1; /* Fila 1 del contenido */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .center-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .center-panel::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        .right-panel {
+            grid-column: 3;
+            grid-row: 1; /* Fila 1 del contenido - ARRIBA */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .footer-area {
+            grid-column: 1 / -1;
+            grid-row: 2; /* Fila 2 */
+        }
+
+        .panel-content {
+            overflow-y: auto;
+            padding: 12px;
+            height: calc(100% - 30px);
+        }
+
+        .panel-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .panel-content::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 2px;
+        }
+
+        .educacion-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: clamp(11px, 1.5vw, 12px);
+        }
+
+        .educacion-item:last-child {
+            border-bottom: none;
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: clamp(9px, 1.2vw, 11px);
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Tablet Breakpoint */
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto 1fr auto;
+            }
+
+            .header-area {
+                grid-column: 1 / -1;
+            }
+
+            .left-panel {
+                grid-column: 1;
+                grid-row: 2;
+            }
+
+            .center-panel {
+                grid-column: 2;
+                grid-row: 2 / 4;
+            }
+
+            .right-panel {
+                grid-column: 1;
+                grid-row: 3;
+            }
+
+            .footer-area {
+                grid-column: 1 / -1;
+                grid-row: 4;
+            }
+        }
+
+        /* Mobile Breakpoint */
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+                gap: 8px;
+                margin-top: 8px;
+            }
+
+            .header-area,
+            .left-panel,
+            .center-panel,
+            .right-panel,
+            .footer-area {
+                grid-column: 1;
+                grid-row: auto;
+            }
+
+            .left-panel,
+            .right-panel {
+                overflow: visible;
+            }
+
+            .center-panel {
+                overflow-y: visible;
+                min-height: auto;
+            }
+
+            .panel-content {
+                height: auto;
+                max-height: 400px;
+            }
+
+            .kpi-container {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .kpi-card {
+                width: 100%;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+
+            .footer-left {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .footer-divider {
+                display: none;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .header-left {
+                justify-content: center;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* Small Mobile */
+        @media (max-width: 480px) {
+            .dashboard-container {
+                padding: 4px;
+            }
+
+            .glass-panel {
+                border-radius: 8px;
+            }
+
+            .modal-content {
+                margin: 20% auto;
+                padding: 16px;
+            }
+        }
+    </style>
+    <base target="_blank">
+<base target="_blank">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header-area glass-panel" style="padding: 6px 12px;">
+            <div class="header-content"
+                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <div class="header-left" style="display: flex; align-items: center; gap: 8px;">
+                    <div
+                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fas fa-baby text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1
+                            style="font-size: clamp(16px, 3vw, 20px); font-weight: 700; color: #2c3e50; margin: 0px; line-height: 1.2;">
+                            Centro de Lactancia Materna</h1>
+                        <p style="font-size: clamp(10px, 2vw, 12px); color: #7f8c8d; margin: 0;">Dashboard | Período
+                            2025</p>
+                    </div>
+                </div>
+                <div class="kpi-container" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <div class="kpi-card" style="min-width: 100px; flex: 0 0 auto;">
+                        <div class="kpi-value" id="total-hc">1,260</div>
+                        <div class="kpi-label">Historias Clínicas</div>
+                    </div>
+                    <div class="kpi-card"
+                        style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); min-width: 100px; flex: 0 0 auto;">
+                        <div class="kpi-value" id="total-madres">1,132</div>
+                        <div class="kpi-label">Madres Asistidas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Left Panel -->
+            <div class="left-panel">
+
+                <div class="glass-panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <div class="section-title" style="margin: 12px 12px 0 12px;">Atención en Internación</div>
+                    <div class="panel-content">
+                        <div style="margin-bottom: 16px; height: 140px; min-height: 140px;">
+                            <canvas id="chartAtencion"></canvas>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+
+                            <div
+                                style="background: #f0fdf4; padding: 8px; border-radius: 8px; text-align: center; border-left: 3px solid #10b981; grid-column: 1 / -1;">
+                                <div style="font-size: clamp(14px, 2.5vw, 18px); font-weight: 700; color: #10b981;">642
+                                </div>
+                                <div style="font-size: clamp(9px, 1.5vw, 11px); color: #666;">Buena Succión (56.7%)
+                                </div>
+                            </div>
+
+                            <div
+                                style="background: #fff5f5; padding: 8px; border-radius: 8px; text-align: center; border-left: 3px solid #e74c3c;">
+                                <div style="font-size: clamp(14px, 2.5vw, 18px); font-weight: 700; color: #e74c3c;">29
+                                </div>
+                                <div style="font-size: clamp(9px, 1.5vw, 11px); color: #666;">Reingresos</div>
+                            </div>
+                            <div
+                                style="background: #fffbeb; padding: 8px; border-radius: 8px; text-align: center; border-left: 3px solid #f59e0b;">
+                                <div style="font-size: clamp(14px, 2.5vw, 18px); font-weight: 700; color: #f59e0b;">265
+                                </div>
+                                <div style="font-size: clamp(9px, 1.5vw, 11px); color: #666;">Requieren Asist.</div>
+                            </div>
+                            
+                            
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel" style="flex: 0.6; display: flex; flex-direction: column; min-height: 0;">
+                    <div class="section-title" style="margin: 12px 12px 0 12px;">Complicaciones [79]</div>
+                    <div class="panel-content">
+                        <div style="margin-bottom: 12px;">
+                            <div
+                                style="display: flex; justify-content: space-between; font-size: clamp(10px, 1.5vw, 12px); margin-bottom: 4px;">
+                                <span>Congestión</span>
+                                <span style="font-weight: 600; color: #e74c3c;">66</span>
+                            </div>
+                            <div style="background: #e0e0e0; border-radius: 10px; height: 20px; overflow: hidden;">
+                                <div
+                                    style="height: 100%; width: 84%; background: linear-gradient(90deg, #ff6b6b, #ee5a24); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: clamp(9px, 1.2vw, 11px); font-weight: 600;">
+                                    84%</div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <div
+                                style="display: flex; justify-content: space-between; font-size: clamp(10px, 1.5vw, 12px); margin-bottom: 4px;">
+                                <span>Pezón: Dolor/Fisura</span>
+                                <span style="font-weight: 600; color: #f39c12;">13</span>
+                            </div>
+                            <div style="background: #e0e0e0; border-radius: 10px; height: 20px; overflow: hidden;">
+                                <div
+                                    style="height: 100%; width: 16%; background: linear-gradient(90deg, #f39c12, #e67e22); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: clamp(9px, 1.2vw, 11px); font-weight: 600;">
+                                    16%</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div
+                                style="display: flex; justify-content: space-between; font-size: clamp(10px, 1.5vw, 12px); margin-bottom: 4px;">
+                                <span>Mastitis</span>
+                                <span style="font-weight: 600; color: #27ae60;">0</span>
+                            </div>
+                            <div style="background: #e0e0e0; border-radius: 10px; height: 20px; overflow: hidden;">
+                                <div
+                                    style="height: 100%; width: 0%; background: linear-gradient(90deg, #2ecc71, #27ae60); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: clamp(9px, 1.2vw, 11px); font-weight: 600;">
+                                    0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel -->
+            <div class="center-panel">
+                
+
+                <div class="chart-grid"
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-height: 360px;">
+                    
+                    <div class="glass-panel" style="display: flex; flex-direction: column; min-height: 250px;">
+                        <div class="section-title" style="margin: 12px 12px 0 12px;">Alimentación al Alta</div>
+                        <div class="panel-content" style="flex: 1; min-height: 180px;">
+                            <canvas id="chartAlimentacion"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-panel" style="display: flex; flex-direction: column; min-height: 250px;">
+                        <div class="section-title" style="margin: 12px 12px 0 12px;">Binomios asistidos por Sector</div>
+                        <div class="panel-content" style="flex: 1; min-height: 180px;">
+                            <canvas id="chartExtraccion"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel"
+                    style="display: flex; flex-direction: column; min-height: 280px; max-height: 3500px;">
+                    <div class="section-title" style="margin: 12px 12px 0 12px;">Educación Recibida (% SI)</div>
+                    <div class="panel-content" style="flex: 1; min-height: 300px;">
+                        <canvas id="chartEducacion"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Panel -->
+            <div class="right-panel">
+                <div class="glass-panel" style="flex: 0.4; padding: 12px;">
+                    <div class="section-title" style="margin: 0 0 8px 0;">
+                        <div
+                            style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 6px; font-size: clamp(9px, 1.5vw, 11px); color: #666; text-align: left;">
+                            <i class="fas fa-calendar-alt" style="margin-right: 4px;"></i>Extracción LH 7/2025 - 12/2025
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div
+                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: clamp(16px, 2.5vw, 20px); font-weight: 700;">1,402</div>
+                            <div style="font-size: clamp(9px, 1.5vw, 11px); opacity: 0.9;">Binomios</div>
+                        </div>
+                        <div
+                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: clamp(16px, 2.5vw, 20px); font-weight: 700;"></div>
+                            <div style="font-size: clamp(9px, 1.5vw, 11px); opacity: 0.9;"></div>
+                        </div>
+                        <div
+                            style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: clamp(16px, 2.5vw, 20px); font-weight: 700;">253.96</div>
+                            <div style="font-size: clamp(9px, 1.5vw, 11px); opacity: 0.9;">Litros Extraídos</div>
+                        </div>
+                        <div
+                            style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: clamp(16px, 2.5vw, 20px); font-weight: 700;">585 hs.</div>
+                            <div style="font-size: clamp(9px, 1.5vw, 11px); opacity: 0.9;">Uso Máquina</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <div class="section-title" style="margin: 12px 12px 0 12px;">Detalle Educación (SI/NO)</div>
+                    <div class="panel-content" style="flex: 1; font-size: clamp(11px, 1.5vw, 12px);">
+                        <div id="educacion-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer-area glass-panel" style="padding: 12px 16px;">
+                <div class="footer-content"
+                    style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                    <div class="footer-left" style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <img src="https://img.freepik.com/premium-vector/portrait-business-woman_505024-2799.jpg?semt=ais_hybrid&w=740&q=80"
+                                alt="Valeria Flores" class="footer-avatar" onclick="openModal('valeria')">
+                            <div>
+                                <div
+                                    style="font-size: clamp(9px, 1.5vw, 11px); color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Director del Proyecto</div>
+                                <div style="font-size: clamp(12px, 2vw, 14px); font-weight: 600; color: #2c3e50;">Mg.
+                                    Valeria Flores</div>
+                                <div style="font-size: clamp(9px, 1.5vw, 11px); color: #667eea;"><i
+                                        class="fas fa-envelope"
+                                        style="margin-right: 4px;"></i>valerianoemiflores.vnf@gmail.com</div>
+                            </div>
+                        </div>
+                        <div class="footer-divider" style="width: 1px; height: 30px; background: #e0e0e0;"></div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <img src="https://static.vecteezy.com/system/resources/thumbnails/060/423/151/small/modern-avatar-icon-design-showing-a-faceless-man-in-formal-attire-perfect-for-professional-or-business-applications-free-png.png"
+                                alt="Alfredo Galván" class="footer-avatar" onclick="openModal('alfredo')">
+                            <div>
+                                <div
+                                    style="font-size: clamp(9px, 1.5vw, 11px); color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Desarrollador web</div>
+                                <div style="font-size: clamp(12px, 2vw, 14px); font-weight: 600; color: #2c3e50;">Tec.
+                                    Alfredo D. Galván
+                                </div>
+                                <div style="font-size: clamp(9px, 1.5vw, 11px); color: #667eea;"><i
+                                        class="fas fa-envelope" style="margin-right: 4px;"></i>alfredodgalvan@gmail.com
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: clamp(10px, 1.5vw, 12px); color: #95a5a6;"><i class="fas fa-sync-alt"
+                                style="margin-right: 4px;"></i>Última actualización: <span
+                                id="last-update">2025-02-08</span></div>
+                        <div style="font-size: clamp(9px, 1.5vw, 11px); color: #bdc3c7; margin-top: 4px;">Centro de
+                            Lactancia Materna ©
+                            2025</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalValeria" class="modal" onclick="if(event.target === this) closeModal('valeria')">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('valeria')">&times;</span>
+            <img src="https://img.freepik.com/premium-vector/portrait-business-woman_505024-2799.jpg?semt=ais_hybrid&w=740&q=80"
+                style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid #667eea; margin-bottom: 16px;">
+            <h2 style="margin: 0; color: #2c3e50; font-size: clamp(16px, 4vw, 20px);">Mg. Valeria Flores</h2>
+            <p style="color: #667eea; font-weight: 600; margin: 8px 0;">Directora del Proyecto</p>
+            <p style="color: #7f8c8d; font-size: clamp(12px, 3vw, 14px); margin: 0;"><i class="fas fa-envelope"
+                    style="margin-right: 8px;"></i>valerianoemiflores.vnf@email.com</p>
+        </div>
+    </div>
+
+    <div id="modalAlfredo" class="modal" onclick="if(event.target === this) closeModal('alfredo')">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('alfredo')">&times;</span>
+            <img src="https://static.vecteezy.com/system/resources/thumbnails/060/423/151/small/modern-avatar-icon-design-showing-a-faceless-man-in-formal-attire-perfect-for-professional-or-business-applications-free-png.png"
+                style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid #667eea; margin-bottom: 16px;">
+            <h2 style="margin: 0; color: #2c3e50; font-size: clamp(16px, 4vw, 20px);">Tec. Alfredo D. Galván</h2>
+            <p style="color: #667eea; font-weight: 600; margin: 8px 0;">Desarrollador Web</p>
+            <p style="color: #7f8c8d; font-size: clamp(12px, 3vw, 14px); margin: 0;"><i class="fas fa-envelope"
+                    style="margin-right: 8px;"></i>alfredodgalvan@email.com</p>
+        </div>
+    </div>
+
+    <script>
+        const data = {
+            atencion: { labels: ['Parto', 'Cesárea'], values: [644, 488], colors: ['#4ECDC4', '#FF6B6B'] },
+            educacion: {
+                labels: ['Beneficios', 'Transición', 'Frecuencia', 'Regla Oro', 'Técnica', 'Pautas ALAS', 'Extracción', 'Señales H.', 'Signos S.', 'Lavado M.', 'Prev. BQL', 'PDF Wapp'],
+                values: [99.38, 99.65, 99.91, 99.65, 98.32, 28.89, 67.40, 99.73, 99.91, 99.91, 100.0, 99.12],
+                colors: ['#2ecc71', '#2ecc71', '#2ecc71', '#2ecc71', '#2ecc71', '#e74c3c', '#f39c12', '#2ecc71', '#2ecc71', '#2ecc71', '#2ecc71', '#2ecc71']
+            },
+            alimentacion: { labels: ['Pecho Exclusivo', 'Lact. Mixta', 'Fórmula'], values: [633, 97, 9], colors: ['#2ECC71', '#F39C12', '#E74C3C'] },
+            extraccion: { labels: ['NEO', 'RPM', 'SIC', 'CE', 'UTIGO'], values: [1220, 107, 56, 9, 3], colors: ['#9B59B6', '#3498DB', '#1ABC9C', '#E67E22', '#34495E'] }
+        };
+
+        Chart.defaults.font.family = "'Segoe UI', sans-serif";
+        Chart.defaults.font.size = 11;
+
+        // Función para destruir gráficos existentes antes de recrear
+        let charts = {};
+
+        function createChart(canvasId, config) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            charts[canvasId] = new Chart(ctx, config);
+        }
+
+        function initCharts() {
+            createChart('chartAtencion', {
+                type: 'doughnut',
+                data: { labels: data.atencion.labels, datasets: [{ data: data.atencion.values, backgroundColor: data.atencion.colors, borderWidth: 0, cutout: '65%' }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: window.innerWidth < 768 ? 'right' : 'bottom',
+                            labels: { boxWidth: 12, padding: 10, font: { size: window.innerWidth < 768 ? 9 : 10 } }
+                        }
+                    }
+                }
+            });
+
+            createChart('chartEducacion', {
+                type: 'bar',
+                data: { labels: data.educacion.labels, datasets: [{ label: '% Recibió educación', data: data.educacion.values, backgroundColor: data.educacion.colors, borderRadius: 4, barThickness: window.innerWidth < 768 ? 10 : 14 }] },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { min: 0, max: 100, ticks: { font: { size: window.innerWidth < 768 ? 8 : 9 } }, grid: { color: '#f0f0f0' } },
+                        y: { ticks: { font: { size: window.innerWidth < 768 ? 8 : 9 } }, grid: { display: false } }
+                    }
+                }
+            });
+
+            createChart('chartAlimentacion', {
+                type: 'bar',
+                data: { labels: data.alimentacion.labels, datasets: [{ data: data.alimentacion.values, backgroundColor: data.alimentacion.colors, borderRadius: 6, barThickness: window.innerWidth < 768 ? 30 : 50 }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { font: { size: window.innerWidth < 768 ? 8 : 9 } }, grid: { color: '#f0f0f0' } },
+                        x: { ticks: { font: { size: window.innerWidth < 768 ? 8 : 9 } }, grid: { display: false } }
+                    }
+                },
+                plugins: [{ afterDatasetsDraw: function (chart) { const ctx = chart.ctx; chart.data.datasets.forEach((dataset, i) => { const meta = chart.getDatasetMeta(i); meta.data.forEach((bar, index) => { const data = dataset.data[index]; const total = dataset.data.reduce((a, b) => a + b, 0); const percentage = ((data / total) * 100).toFixed(1); ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(data, bar.x, bar.y - 25); ctx.fillStyle = '#7f8c8d'; ctx.font = '11px Segoe UI'; ctx.fillText(percentage + '%', bar.x, bar.y - 10); }); }); } }]
+            });
+
+            createChart('chartExtraccion', {
+                type: 'bar',
+                data: { labels: data.extraccion.labels, datasets: [{ data: data.extraccion.values, backgroundColor: data.extraccion.colors, borderRadius: 6, barThickness: window.innerWidth < 768 ? 25 : 40 }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { font: { size: window.innerWidth < 768 ? 8 : 9 } }, grid: { color: '#f0f0f0' } },
+                        x: { ticks: { font: { size: window.innerWidth < 768 ? 8 : 9 } }, grid: { display: false } }
+                    }
+                },
+                plugins: [{ afterDatasetsDraw: function (chart) { const ctx = chart.ctx; chart.data.datasets.forEach((dataset, i) => { const meta = chart.getDatasetMeta(i); meta.data.forEach((bar, index) => { const data = dataset.data[index]; const total = dataset.data.reduce((a, b) => a + b, 0); const percentage = ((data / total) * 100).toFixed(1); ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(data, bar.x, bar.y - 20); if (percentage > 3) { ctx.fillStyle = '#7f8c8d'; ctx.font = '10px Segoe UI'; ctx.fillText(percentage + '%', bar.x, bar.y - 6); } }); }); } }]
+            });
+        }
+
+        const educacionDetalle = [
+            { nombre: 'Beneficios Lactancia', si: 1125, no: 7, codigo: 'TL' }, { nombre: 'Transición Leche', si: 1128, no: 4, codigo: 'FA' },
+            { nombre: 'Frecuencia Alim.', si: 1131, no: 1, codigo: 'RO' }, { nombre: 'Regla de Oro', si: 1128, no: 4, codigo: 'TPP' },
+            { nombre: 'Téc. Prendida Pecho', si: 1113, no: 19, codigo: 'ALAS' }, { nombre: 'Pautas ALAS', si: 327, no: 805, codigo: 'BLH' },
+            { nombre: 'Extracción/Conserv.', si: 763, no: 369, codigo: 'SH' }, { nombre: 'Señales Hambre', si: 1129, no: 3, codigo: 'SS' },
+            { nombre: 'Signos Saciedad', si: 1131, no: 1, codigo: 'LDM' }, { nombre: 'Lavado Manos', si: 1131, no: 1, codigo: 'PBQL' },
+            { nombre: 'Prevención BQL', si: 1132, no: 0, codigo: 'BQL' }, { nombre: 'PDF WhatsApp', si: 1122, no: 10, codigo: 'WAPP' }
+        ];
+
+        const educacionList = document.getElementById('educacion-list');
+        educacionDetalle.forEach(item => {
+            const total = item.si + item.no; const porcentaje = ((item.si / total) * 100).toFixed(0);
+            const div = document.createElement('div'); div.className = 'educacion-item';
+            div.innerHTML = `<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;"><span style="font-weight: 500;">${item.nombre}</span><span style="background: #e0e0e0; padding: 2px 6px; border-radius: 4px; font-size: clamp(8px, 1.2vw, 10px); color: #666;">${item.codigo}</span></div><div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;"><span class="badge ${porcentaje > 90 ? 'badge-success' : porcentaje > 50 ? 'badge-warning' : 'badge-danger'}">${porcentaje}%</span><span style="color: #999; font-size: clamp(9px, 1.5vw, 11px);">${item.si}/${total}</span></div>`;
+            educacionList.appendChild(div);
+        });
+
+        function openModal(person) { document.getElementById('modal' + person.charAt(0).toUpperCase() + person.slice(1)).style.display = 'block'; }
+        function closeModal(person) { document.getElementById('modal' + person.charAt(0).toUpperCase() + person.slice(1)).style.display = 'none'; }
+        document.getElementById('last-update').textContent = new Date().toLocaleDateString('es-ES');
+
+        // Inicializar gráficos
+        initCharts();
+
+        // Recrear gráficos al redimensionar con debounce
+        let resizeTimer;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                initCharts();
+            }, 250);
+        });
+    </script>
+</body>
+
+</html>
